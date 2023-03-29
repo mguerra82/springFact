@@ -1,14 +1,21 @@
 package com.epq.core.controllers;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
+
+import javax.validation.Valid;
 
 import org.hibernate.exception.DataException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -63,23 +70,46 @@ public class ClienteRestController {
 	
 	@PostMapping("clientes")
 	@ResponseStatus(HttpStatus.CREATED)
-	public ResponseEntity<?> create(@RequestBody Cliente cliente) {
+	public ResponseEntity<?> create(@Valid @RequestBody Cliente cliente, BindingResult result) {
 
 		Cliente clienteNew = null;
 		Map<String, Object> response = new HashMap<>();
+				
+				
+		/**
+		 * Para obtener las validaciones en el modelo, se debe importar @Valid en el encabeza del metodo.												
+		 */
+		
+		if(result.hasErrors()) {
+			
+			List<String> errors = new ArrayList<>();
+			
+			for(FieldError err: result.getFieldErrors()) {
+				errors.add("El campor'" + err.getField() + "' "+ err.getDefaultMessage());
+			}
+			
+			
+		/*	List<String> errors = result.getFieldErrors().stream()
+	                 									 .map(err -> "El campo '"+ err.getField() +"' "+ err.getDefaultMessage())
+	                 				                     .collect(Collectors.toList());
+			*/
+			response.put("errors", errors);
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.BAD_REQUEST);
+			
+		}
 
 		try {
 			clienteNew = clienteService.save(cliente);
 
-			if (clienteNew == null || clienteNew.getNombre().isEmpty() || clienteNew.getApellido().isBlank()
-					|| clienteNew.getApellido().isEmpty()) {
+			if (clienteNew == null || clienteNew.getNombre().isEmpty() || clienteNew.getApellido().isBlank()|| clienteNew.getApellido().isEmpty()) 
+			{
 				response.put("mensaje", "El nombre y apellido no pueden estar vacios ");
 
 				return new ResponseEntity<Map<String, Object>>(response, HttpStatus.NOT_ACCEPTABLE);
 			}
 
 		} catch (DataAccessException e) {
-			response.put("mensaje", "Erro al insertar en la base de datos");
+			response.put("mensaje", "Error al insertar en la base de datos, verifique los campos obligarios y que el correo no este repetido");
 			response.put("error", e.getMessage().concat(": ").concat(e.getMostSpecificCause().getMessage()));
 			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.INTERNAL_SERVER_ERROR);
 		}
@@ -92,7 +122,7 @@ public class ClienteRestController {
 	}
 	
 	@PutMapping("clientes/{id}")
-	public ResponseEntity<?> modificado(@RequestBody Cliente cliente, @PathVariable Long id) {
+	public ResponseEntity<?> modificado(@Valid @RequestBody Cliente cliente, BindingResult result, @PathVariable Long id) {
 
 		Cliente clienteActual = clienteService.findById(id);
 
@@ -100,7 +130,21 @@ public class ClienteRestController {
 
 		Map<String, Object> response = new HashMap<>();
 
-		System.out.println("CLIENTE:........"+ clienteActual.getNombre().toString());
+		/**
+		 * Para obtener las validaciones en el modelo, se debe importar @Valid en el encabeza del metodo.												
+		 */
+		
+		if(result.hasErrors()) {
+			
+			List<String> errors = result.getFieldErrors().stream()
+	                 									 .map(err -> "El campo '"+ err.getField() +"' "+ err.getDefaultMessage())
+	                 				                     .collect(Collectors.toList());
+			response.put("errors", errors);
+			
+			return new ResponseEntity<Map<String, Object>>(response, HttpStatus.BAD_REQUEST);
+			
+		}
+
 		
 		
 		if (clienteActual == null || clienteActual.getNombre().isEmpty() || clienteActual.getNombre().isBlank() || clienteActual.getApellido().isBlank()
