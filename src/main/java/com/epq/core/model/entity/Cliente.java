@@ -33,7 +33,7 @@ public class Cliente implements Serializable{
 	private String apellido;
 	
 	@Email
-	@Column(nullable = false, unique = true)
+	@Column(nullable = false, unique = false)
 	private String email;
 	
 	@Column(name="create_at")
